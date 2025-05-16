@@ -10,15 +10,16 @@
 #define D_ALLOC 32
 #define D_GROWTH 2
 
-const char *colour[] = { // Will probably move it somewhere else, eventually, hopefully
-  "\033[0;34m", // Blue
-  "\033[0;32m", // Green
-  "\033[0;33m", // Yellow
-  "\033[0;31m", // Red
-  "\033[0;35m", // Purple
-  "\033[0;37m", // White
-  "\033[0;36m", // Cyan
-  "\033[0m"     // Reset
+const char *colour[] = {
+    // Will probably move it somewhere else, eventually, hopefully
+    "\033[0;34m", // Blue
+    "\033[0;32m", // Green
+    "\033[0;33m", // Yellow
+    "\033[0;31m", // Red
+    "\033[0;35m", // Purple
+    "\033[0;37m", // White
+    "\033[0;36m", // Cyan
+    "\033[0m"     // Reset
 };
 
 typedef enum { // Log levels
@@ -28,18 +29,26 @@ typedef enum { // Log levels
   ERROR
 } LogLevel;
 
+typedef enum { // vim modes
+  NORMAL,
+  INSERT,
+  COMMAND,
+  VISUAL
+} Mode;
+
 int ttySwitch(int m);
 int ltf(char *msg, LogLevel l);
 
 int main(int argc, char *argv[]) {
 
   // Variables
-  char *dynBuf = NULL;    // Dynamic text buffer (user input)
-  size_t dynAlloc = 0;    // Dynamic buffer allocated size
+  char *dynTxtBuf = NULL;    // Dynamic text buffer (user input)
+  size_t dynTxtAlloc = 0;    // Dynamic buffer allocated size
   char *fdBuf = NULL;     // File buffer
-  char crtBuf = 0x00;     // Current buffer
-  int curPos[2] = {0, 0}; // Cursor position
-  int lPos = 0;           // Line position (1d curPos for convenience)
+  char crtBuf = 0x00;     // Current buffer (last typed char)
+  Mode mode = NORMAL;     // Current mode
+  int curPos[2] = {0, 0}; // Cursor position (x, y)
+  int lPos = 1;           // Line position (1d curPos for convenience)
   int rdStat = 1;         // Status of read()
   size_t fdLen = 0;       // File length
   FILE *fd = NULL;        // File descriptor
@@ -73,40 +82,42 @@ int main(int argc, char *argv[]) {
   fread(fdBuf, 0, fdLen, fd);
   fdBuf[fdLen + 0] = '\0';
 
-  dynBuf = malloc(fdLen + 1);
-  if (dynBuf == NULL) {
+  dynTxtBuf = malloc(dynTxtAlloc + 1);
+  if (dynTxtBuf == NULL) {
     ltf("Memory allocation failed\n", ERROR);
     return S_MALLOC;
   }
 
   ttySwitch(0);
+  printf("\033c"); // Clear screen
+  fflush(stdout);
 
   // Read Input
-  while (rdStat) {
+  while (rdStat == 1) {
     rdStat = read(0, &crtBuf, 1);
 
-    switch (crtBuf) {
-    case 0x03:
-    case 0x04:
-      rdStat = S_UIINERR; // User input error
-      break;
-    case 0x0A:
-      printf("  %i\n", crtBuf);
-      break;
-    default:
-      if (lPos >= dynAlloc) {
-        dynAlloc = (int)(dynAlloc * D_GROWTH);
-        char *tmp = realloc(dynBuf, (int)(D_ALLOC * D_GROWTH));
-        if (tmp == NULL) {
-          ltf("Memory reallocation failed\n", ERROR);
-          return S_REALLOC;
+    switch(mode) {
+      case NORMAL:
+        switch(crtBuf) {
+          case 0x0A:
+          case 'h':
+          case 'j':
+          case 'k':
+          case 'l':
+          case 'i':
+          case 'v':
+          break;
+          case ':':
+            mode = COMMAND;
+          break;
         }
-        dynBuf = tmp;
-      }
-
-      printf("%c %i\n", crtBuf, crtBuf);
-      fflush(stdout);
+      case INSERT:
+        
+      case COMMAND:
+      case VISUAL:
+        break;
     }
+
   }
 
   ttySwitch(1);

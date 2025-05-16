@@ -1,3 +1,4 @@
 build/
 testfile
-
+*.o
+*.bin

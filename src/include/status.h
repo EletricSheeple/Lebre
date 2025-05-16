@@ -13,4 +13,6 @@
 #define S_FEX      -9   // File exists
 #define S_FPERM    -10  // File permissions
 
+#define SP_NULL ((void *)(0)) // Used to comply with my return convention (SP stands for Status Pointer)
+
 #endif // !_STATUS_H_
